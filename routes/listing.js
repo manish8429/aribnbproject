@@ -26,7 +26,6 @@ router.get("/",  wrapAsync (async (req, res) => {
         path: "reviews", 
         populate: {
         path: "author",
-        // console.log()
       },
       })
       .populate("Owner");

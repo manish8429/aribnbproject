@@ -3,93 +3,36 @@ const router = express.Router();
 const wrapAsync = require("../utils/wrapAsync.js");
 const Listing = require("../models/listing.js");
 const { isLoggedIn, isOwner, validateListing } = require("../middleware.js");
+const listingController = require("../controllers/listings.js");
+const multer = require(`multer`);
+const {storage} = require("../cloudConfig.js");
+const upload = multer({storage})
+ 
 
-
-
-// index rought
-router.get("/",  wrapAsync (async (req, res) => {
-    const allListings = await Listing.find({});
-    res.render("./listings/index.ejs", {allListings});
-  }));
-  
-  
-  // new route api
-  router.get("/new", isLoggedIn,(req, res)=> {
-      res.render("./listings/new.ejs");
-  });
-  
-  // show rought api
-  router.get("/:id", async(req, res) => {
-      let {id} = req.params;
-      const listing = await Listing.findById(id)
-      .populate({ 
-        path: "reviews", 
-        populate: {
-        path: "author",
-      },
-      })
-      .populate("Owner");
-      if(!listing) {
-        req.flash("success", "Listing Does Not Exist");
-        res.redirect("/listing");
-      }
-      res.render("./listings/show.ejs", {listing});
-  });
-   
-  
-// Create Rought api
-router.post("/",
+router
+.route("/")
+.get(wrapAsync (listingController.index))
+.post(
 isLoggedIn,
-
-        async (req, res, next) => {
-   let {title,description,location,country,price,image} = req.body.listing;
-   image = {
-    url: image,
-    filename: "",
-   };
-   const newListing = new Listing({title,description,location,country,price,image});
-   newListing.Owner = req.user._id;
-     const listing =  await newListing.save();
-     req.flash("success", "New Listing Created");
-       res.redirect("/listings");
-    
-  }
+upload.single('listing[image]'),
+wrapAsync(listingController.createListing)
 );
 
-// Edit rought
-router.get("/:id/edit", isLoggedIn,isOwner, wrapAsync ( async (req, res) => {
-   let {id} = req.params;
-   const listing = await Listing.findById(id);
-   if(!listing) {
-    req.flash("success", "Listing Does Not Exist");
-    res.redirect("/listing");
-  }
-   res.render("./listings/edit.ejs", {listing});
-}));
-
-// update Rought
-router.put("/:id",
+ // new route api
+ router.get("/new", isLoggedIn, listingController.renderNewForm);
+router
+.route("/:id")
+.get(listingController.showListing)
+.put(
 isLoggedIn,
 isOwner,
+upload.single('listing[image]'),
 //  validateListing,
-wrapAsync ( async (req, res) => {
-   let { id } = req.params;
-   const {title,description,location,country,price,image} = req.body.listing
-   await Listing.findByIdAndUpdate(id, {title,description,location,country,price,image:{url:image}});
-   req.flash("success", "Listing Updated");
-   res.redirect(`/listings/${id}`);
- }));
-
-
-
- // Delete Rought
- router.delete("/:id", isLoggedIn, isOwner, wrapAsync (async (req, res) => {
-   let { id } = req.params;
-   let deletedListing = await Listing.findByIdAndDelete(id);
-   console.log(deletedListing);
-   req.flash("success", "Listing Deleted");
-   res.redirect("/listings");
- }));
-
-
+wrapAsync (listingController.updateListing)
+)
+.delete(isLoggedIn, isOwner, wrapAsync (listingController.destroyListing )
+);
+// Edit rought
+router.get("/:id/edit", isLoggedIn,isOwner, wrapAsync (listingController.renderEditFrom)
+);
  module.exports= router;

@@ -101,3 +101,8 @@ display: flex
     margin-left: 0;
     margin-right: 0;
 }
+
+#map { 
+  height: 400px; 
+      width: 90vh;
+ }
